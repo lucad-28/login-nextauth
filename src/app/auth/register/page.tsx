@@ -1,30 +1,63 @@
 "use client";
+import { useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 
 type RegUser = {
-  username: string,
-  password: string,
-  confirmpass: string,
+  username: string;
+  password: string;
+  confirmpass: string;
+};
+
+interface FieldErrors {
+  message: string;
 }
 
-export default function Register(){
+interface FormErrors {
+  confirPassDif?: FieldErrors;
+  userExist?: FieldErrors;
+}
+
+export default function Register() {
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<RegUser>();
+
+  const [error, setError] = useState<FormErrors>({});
+
   const onSubmit: SubmitHandler<RegUser> = async (data) => {
-    
-    const res = await fetch("../../api/auth/register", {
+    if (data.password !== data.confirmpass) {
+      setError({
+        ...error,
+        confirPassDif: { message: "Las contraseñas no coinciden" },
+      });
+      return;
+    }
+
+    const res = await fetch("../../api/auth", {
       method: "POST",
       body: JSON.stringify(data),
       headers: {
         "Content-Type": "application/json",
-      }
-    })
+      },
+    });
+
+    if (res.ok) {
+      setError({});
+      console.log("Usuario registrado");
+    }
+
     const mes = await res.json();
-    
-   console.log(mes);
+
+    if (mes.status === 400) {
+      setError({
+        ...error,
+        userExist: { message: mes.message },
+      });
+
+      return;
+    }
   };
 
   return (
@@ -40,11 +73,16 @@ export default function Register(){
               onSubmit={handleSubmit(onSubmit)}
             >
               <div>
+                {error?.userExist && (
+                  <span className="text-white bg-red-950">
+                    {error.userExist.message}
+                  </span>
+                )}
                 <label
                   htmlFor="email"
                   className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                 >
-Usuario
+                  Usuario
                 </label>
                 <input
                   type="text"
@@ -59,7 +97,9 @@ Usuario
                   })}
                 />
                 {errors?.username && (
-                  <span className="text-red-500">{errors.username.message}</span>
+                  <span className="text-red-500">
+                    {errors.username.message}
+                  </span>
                 )}
               </div>
               <div>
@@ -82,23 +122,41 @@ Usuario
                   })}
                 />
                 {errors?.password && (
-                  <span className="text-red-500">{errors.password.message}</span>
-              
+                  <span className="text-red-500">
+                    {errors.password.message}
+                  </span>
                 )}
               </div>
               <div>
-                          <label htmlFor="confirm-password" className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Confirmar contraseña</label>
-                          <input type="confirm-password" id="confirm-password" placeholder="••••••••" className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" {...register("confirmpass", {
+                <label
+                  htmlFor="confirm-password"
+                  className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
+                  Confirmar contraseña
+                </label>
+                <input
+                  type="password"
+                  id="confirm-password"
+                  placeholder="••••••••"
+                  className="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                  {...register("confirmpass", {
                     required: {
                       value: true,
                       message: "La confirmación de contraseña es requerida",
                     },
-                  })}/>
+                  })}
+                />
                 {errors?.confirmpass && (
-                  <span className="text-red-500">{errors.confirmpass.message}</span>
-              
+                  <span className="text-red-500">
+                    {errors.confirmpass.message}
+                  </span>
                 )}
-                      </div>
+                {error?.confirPassDif && (
+                  <span className="text-red-500">
+                    {error.confirPassDif.message}
+                  </span>
+                )}
+              </div>
               <button
                 type="submit"
                 className="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
@@ -111,6 +169,4 @@ Usuario
       </div>
     </section>
   );
-
-
 }
